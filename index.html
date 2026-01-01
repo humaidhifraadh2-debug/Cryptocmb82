@@ -2,15 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-
-  <!-- Auto update (no cache) -->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-
-  <!-- Auto refresh -->
-  <meta http-equiv="refresh" content="30">
-
   <title>Cash Tracker</title>
     
     <meta charset="UTF-8">
@@ -361,6 +352,43 @@
 
             doc.save(`CryptoCMB_Report_${filter}_${now.toISOString().split('T')[0]}.pdf`);
         }
-    </script>
+    <script>
+  const APP_VERSION = '1.0.0'; // CHANGE ON EVERY UPDATE
+  const CHECK_INTERVAL = 20000; // 20 seconds
+  let userActive = false;
+
+  // Detect user activity
+  ['click', 'keydown', 'touchstart', 'mousemove'].forEach(event => {
+    document.addEventListener(event, () => {
+      userActive = true;
+      clearTimeout(window._idleTimer);
+      window._idleTimer = setTimeout(() => userActive = false, 5000);
+    });
+  });
+
+  // Background update check
+  setInterval(async () => {
+    try {
+      const response = await fetch(location.href, { cache: 'no-store' });
+      const text = await response.text();
+
+      const match = text.match(/APP_VERSION\s*=\s*['"](.+?)['"]/);
+      if (!match) return;
+
+      const latestVersion = match[1];
+      const storedVersion = localStorage.getItem('app_version');
+
+      if (storedVersion && storedVersion !== latestVersion && !userActive) {
+        localStorage.setItem('app_version', latestVersion);
+        location.reload();
+      }
+
+      if (!storedVersion) {
+        localStorage.setItem('app_version', APP_VERSION);
+      }
+    } catch (e) {}
+  }, CHECK_INTERVAL);
+</script>
+
 </body>
 </html>
