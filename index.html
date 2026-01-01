@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Crypto CMB | Final V7 Report Edition</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Charts & PDF Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #5469d4;
+            --bg: #f8fafc;
+            --sidebar-bg: #ffffff;
+            --text: #1e293b;
+            --muted: #64748b;
+            --card: #ffffff;
+            --red: #ef4444;
+            --green: #10b981;
+            --radius: 16px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+
+        /* --- LOGIN SCREEN --- */
+        #login-screen { position: fixed; inset: 0; background: white; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .login-card { width: 100%; max-width: 400px; text-align: center; }
+        .login-card h1 { font-weight: 800; font-size: 28px; margin-bottom: 30px; }
+        .login-card h1 span { color: var(--primary); }
+        .login-card input { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 12px; outline: none; font-size: 16px; }
+        .login-btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; }
+
+        /* --- LAYOUT STRUCTURE --- */
+        #main-app { display: none; height: 100vh; width: 100vw; }
+        aside { position: fixed; top: 0; left: 0; bottom: 0; width: 260px; background: var(--sidebar-bg); border-right: 1px solid #e2e8f0; padding: 24px; display: flex; flex-direction: column; z-index: 1000; transition: transform 0.3s ease; }
+        .nav-logo { font-size: 20px; font-weight: 800; margin-bottom: 40px; }
+        .nav-logo span { color: var(--primary); }
+        .nav-item { display: flex; align-items: center; padding: 12px 16px; color: var(--muted); border-radius: 12px; margin-bottom: 4px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .nav-item i { margin-right: 12px; width: 20px; text-align: center; font-size: 18px; }
+        .nav-item:hover, .nav-item.active { background: #f1f5f9; color: var(--primary); }
+        .nav-logout { margin-top: auto; color: var(--red); }
+
+        main { margin-left: 260px; padding: 30px; height: 100vh; overflow-y: auto; transition: margin 0.3s; }
+        .mobile-header { display: none; background: white; padding: 15px 20px; border-bottom: 1px solid #e2e8f0; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 900; }
+        .menu-toggle { font-size: 24px; cursor: pointer; color: var(--primary); }
+
+        /* Dashboard Items */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .card { background: var(--card); padding: 20px; border-radius: var(--radius); border: 1px solid #e2e8f0; box-shadow: var(--shadow); position: relative; }
+        .card h4 { font-size: 11px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+        .card .val { font-size: 20px; font-weight: 800; }
+
+        .chart-section { background: white; padding: 20px; border-radius: var(--radius); border: 1px solid #e2e8f0; margin-bottom: 24px; }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        
+        /* Tables */
+        .table-wrap { background: white; border-radius: var(--radius); border: 1px solid #e2e8f0; overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th { text-align: left; padding: 14px; font-size: 11px; color: var(--muted); text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+
+        /* Buttons */
+        .btn { padding: 8px 14px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 12px; }
+        .btn-add { background: var(--primary); color: white; padding: 10px 20px; font-size: 14px; }
+        .btn-pdf { background: #1e293b; color: white; display: flex; align-items: center; gap: 8px; }
+        .btn-edit { background: #f1f5f9; color: var(--primary); margin-right: 5px; }
+        .btn-del { background: #fff1f1; color: var(--red); }
+        .btn-cash-plus { background: var(--green); color: white; margin-right: 5px; }
+
+        /* Modals */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(4px); }
+        .modal-content { background: white; padding: 25px; border-radius: 20px; width: 100%; max-width: 450px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 5px; }
+        .input-group input, .input-group select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; outline: none; }
+
+        @media (max-width: 900px) {
+            aside { transform: translateX(-100%); width: 260px; }
+            aside.open { transform: translateX(0); }
+            main { margin-left: 0; padding: 20px; }
+            .mobile-header { display: flex; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
+        .hidden { display: none; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- Login -->
+    <div id="login-screen">
+        <div class="login-card">
+            <h1>CRYPTO<span>CMB</span></h1>
+            <input type="text" id="user" placeholder="Username">
+            <input type="password" id="pass" placeholder="Password">
+            <button class="login-btn" onclick="login()">Sign In</button>
+            <p id="err" style="color:red; font-size:12px; margin-top:10px; display:none;">Invalid credentials</p>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div id="main-app">
+        <div class="mobile-header">
+            <i class="fa-solid fa-bars menu-toggle" onclick="toggleSidebar()"></i>
+            <div style="font-weight: 800; font-size: 18px;">CRYPTO<span>CMB</span></div>
+            <div style="width: 24px;"></div>
+        </div>
+
+        <aside id="sidebar">
+            <div class="nav-logo">CRYPTO<span>CMB</span></div>
+            <div class="nav-item active" onclick="nav('dashboard', this)"><i class="fa-solid fa-house"></i> Dashboard</div>
+            <div class="nav-item" onclick="nav('deals', this)"><i class="fa-solid fa-handshake"></i> Deals</div>
+            <div class="nav-item" onclick="nav('banks', this)"><i class="fa-solid fa-building-columns"></i> Banks</div>
+            <div class="nav-item" onclick="nav('cash', this)"><i class="fa-solid fa-wallet"></i> Cash</div>
+            <div class="nav-item" onclick="nav('cw', this)"><i class="fa-solid fa-user-tag"></i> Cash With</div>
+            <div class="nav-item" onclick="nav('dc', this)"><i class="fa-solid fa-users"></i> Debtors/Creditors</div>
+            <div class="nav-item" onclick="nav('comm', this)"><i class="fa-solid fa-percent"></i> Commissions</div>
+            <div class="nav-item nav-logout" onclick="location.reload()"><i class="fa-solid fa-power-off"></i> Logout</div>
+        </aside>
+
+        <main onclick="closeSidebarMobile()">
+            <div class="header-flex">
+                <div id="view-title" style="font-size: 22px; font-weight: 800;">Dashboard</div>
+                <div id="dash-actions" class="flex">
+                    <button class="btn btn-pdf" onclick="generateReport()"><i class="fa-solid fa-file-pdf"></i> Download Report</button>
+                </div>
+            </div>
+
+            <!-- View: Dashboard -->
+            <div id="v-dashboard" class="app-view">
+                <div class="stats-grid">
+                    <div class="card"><h4>Total Cash</h4><div class="val" id="stat-cash">Rs. 0</div></div>
+                    <div class="card"><h4>Total Bank</h4><div class="val" id="stat-bank">Rs. 0</div></div>
+                    <div class="card"><h4>Cash with Indiv.</h4><div class="val text-red" id="stat-cw">Rs. 0</div></div>
+                    <div class="card"><h4>Total Profit</h4><div class="val text-green" id="stat-profit">Rs. 0</div></div>
+                    <div class="card"><h4>Total Debtors</h4><div class="val" id="stat-debt">Rs. 0</div></div>
+                    <div class="card"><h4>Pending Comm.</h4><div class="val" id="stat-comm">Rs. 0</div></div>
+                </div>
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h3 style="font-size:16px">Profit Analysis</h3>
+                        <select id="chartFilter" onchange="renderChart()" style="padding:5px; border-radius:8px; border:1px solid #ccc;">
+                            <option value="weekly">Weekly View</option>
+                            <option value="monthly">Monthly View</option>
+                        </select>
+                    </div>
+                    <div style="height: 300px;"><canvas id="profitChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Management Views -->
+            <div id="v-deals" class="app-view hidden">
+                <div class="header-flex"><h3>Deals</h3><button class="btn btn-add" onclick="openModal('m-deals')">+ New Deal</button></div>
+                <div class="table-wrap"><table id="t-deals"><thead><tr><th>Date</th><th>Name</th><th>Amount</th><th>Profit</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+            </div>
+
+            <div id="v-banks" class="app-view hidden">
+                <div class="header-flex"><h3>Banks</h3><button class="btn btn-add" onclick="openModal('m-banks')">+ Add Bank</button></div>
+                <div class="stats-grid" id="g-banks"></div>
+            </div>
+
+            <div id="v-cash" class="app-view hidden">
+                <div class="header-flex"><h3>Cash Management</h3><button class="btn btn-add" onclick="openModal('m-cash')">+ Add Location</button></div>
+                <div class="stats-grid" id="g-cash"></div>
+            </div>
+
+            <div id="v-cw" class="app-view hidden">
+                <div class="header-flex"><h3>Cash With Individuals</h3><button class="btn btn-add" onclick="openModal('m-cw')">+ New Entry</button></div>
+                <div class="table-wrap"><table id="t-cw"><thead><tr><th>Date</th><th>Person</th><th>Amount</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+            </div>
+
+            <div id="v-dc" class="app-view hidden">
+                <div class="header-flex"><h3>Debtors & Creditors</h3><button class="btn btn-add" onclick="openModal('m-dc')">+ New Entry</button></div>
+                <div class="table-wrap"><table id="t-dc"><thead><tr><th>Name</th><th>Type</th><th>Amount</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+            </div>
+
+            <div id="v-comm" class="app-view hidden">
+                <div class="header-flex"><h3>Commissions</h3><button class="btn btn-add" onclick="openModal('m-comm')">+ New Entry</button></div>
+                <div class="table-wrap"><table id="t-comm"><thead><tr><th>Date</th><th>Assignee</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="m-deals" class="modal"><div class="modal-content"><h3>Deal Entry</h3><div class="input-group"><label>Date</label><input type="date" id="d-date"></div><div class="input-group"><label>Name</label><input type="text" id="d-name"></div><div class="input-group"><label>Amount</label><input type="number" id="d-amt"></div><div class="input-group"><label>Profit</label><input type="number" id="d-prof"></div><button class="btn btn-add" style="width:100%" onclick="save('deals')">Save</button><button class="btn" style="width:100%; margin-top:10px;" onclick="closeModal('m-deals')">Cancel</button></div></div>
+    <div id="m-banks" class="modal"><div class="modal-content"><h3>Bank Entry</h3><div class="input-group"><label>Bank Name</label><input type="text" id="b-name"></div><div class="input-group"><label>Balance</label><input type="number" id="b-bal"></div><button class="btn btn-add" style="width:100%" onclick="save('banks')">Save</button><button class="btn" style="width:100%; margin-top:10px;" onclick="closeModal('m-banks')">Cancel</button></div></div>
+    <div id="m-cash" class="modal"><div class="modal-content"><h3>Cash Location</h3><div class="input-group"><label>Location Name</label><input type="text" id="c-name"></div><div class="input-group"><label>Amount</label><input type="number" id="c-bal"></div><button class="btn btn-add" style="width:100%" onclick="save('cash')">Save</button><button class="btn" style="width:100%; margin-top:10px;" onclick="closeModal('m-cash')">Cancel</button></div></div>
+    <div id="m-cw" class="modal"><div class="modal-content"><h3>Cash With Entry</h3><div class="input-group"><label>Date</label><input type="date" id="cw-date"></div><div class="input-group"><label>Person Name</label><input type="text" id="cw-name"></div><div class="input-group"><label>Amount</label><input type="number" id="cw-amt"></div><button class="btn btn-add" style="width:100%" onclick="save('cw')">Save</button><button class="btn" style="width:100%; margin-top:10px;" onclick="closeModal('m-cw')">Cancel</button></div></div>
+    <div id="m-dc" class="modal"><div class="modal-content"><h3>D/C Entry</h3><div class="input-group"><label>Name</label><input type="text" id="dc-name"></div><div class="input-group"><label>Type</label><select id="dc-type"><option value="Debtor">Debtor</option><option value="Creditor">Creditor</option></select></div><div class="input-group"><label>Amount</label><input type="number" id="dc-amt"></div><button class="btn btn-add" style="width:100%" onclick="save('dc')">Save</button><button class="btn" style="width:100%; margin-top:10px;" onclick="closeModal('m-dc')">Cancel</button></div></div>
+    <div id="m-comm" class="modal"><div class="modal-content"><h3>Commission Entry</h3><div class="input-group"><label>Assignee</label><select id="cm-who"><option value="humaidh">Humaidh</option><option value="abdullah">Abdullah</option><option value="muhammadh">Muhammadh</option></select></div><div class="input-group"><label>Amount</label><input type="number" id="cm-amt"></div><div class="input-group"><label>Paid Status</label><select id="cm-paid"><option value="false">Pending</option><option value="true">Paid</option></select></div><button class="btn btn-add" style="width:100%" onclick="save('comm')">Save</button><button class="btn" style="width:100%; margin-top:10px;" onclick="closeModal('m-comm')">Cancel</button></div></div>
+    <div id="m-cash-adjust" class="modal"><div class="modal-content"><h3>Adjust Cash</h3><p id="adj-target-name" style="margin-bottom:15px; font-weight:600;"></p><div class="input-group"><label>Add Amount (LKR)</label><input type="number" id="adj-amt"></div><button class="btn btn-add" style="width:100%" onclick="executeAdjustment()">Add Cash</button><button class="btn" style="width:100%; margin-top:10px;" onclick="closeModal('m-cash-adjust')">Cancel</button></div></div>
+
+    <script>
+        // --- 1. DATA & STATE ---
+        let db = { deals: [], banks: [], cash: [{id:1, name:'Main Safe', balance:0}], cw: [], dc: [], comm: [] };
+        let editId = null; let adjId = null; let chart = null;
+
+        function sync() { localStorage.setItem('cmb_final_v7', JSON.stringify(db)); render(); }
+        function load() { const saved = localStorage.getItem('cmb_final_v7'); if (saved) db = JSON.parse(saved); render(); }
+
+        function login() {
+            const users = { humaidh: "humaidh123", abdullah: "abdullah123", muhammadh: "muhammadh123" };
+            const u = document.getElementById('user').value.toLowerCase().trim();
+            const p = document.getElementById('pass').value.trim();
+            if (users[u] && users[u] === p) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                load();
+            } else { document.getElementById('err').style.display = 'block'; }
+        }
+
+        function nav(id, el) {
+            document.querySelectorAll('.app-view').forEach(v => v.classList.add('hidden'));
+            document.getElementById('v-' + id).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('view-title').innerText = el.innerText.trim();
+            document.getElementById('dash-actions').style.display = (id === 'dashboard') ? 'flex' : 'none';
+            closeSidebarMobile();
+            if(id === 'dashboard') setTimeout(renderChart, 100);
+        }
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function closeSidebarMobile() { if(window.innerWidth < 900) document.getElementById('sidebar').classList.remove('open'); }
+
+        function openModal(mid) { document.getElementById(mid).style.display = 'flex'; }
+        function closeModal(mid) { document.getElementById(mid).style.display = 'none'; editId = null; adjId = null; }
+
+        function save(cat) {
+            let item = { id: editId || Date.now() };
+            if (cat === 'deals') { item.date = document.getElementById('d-date').value; item.name = document.getElementById('d-name').value; item.amt = parseFloat(document.getElementById('d-amt').value) || 0; item.prof = parseFloat(document.getElementById('d-prof').value) || 0; }
+            else if (cat === 'banks') { item.name = document.getElementById('b-name').value; item.balance = parseFloat(document.getElementById('b-bal').value) || 0; }
+            else if (cat === 'cash') { item.name = document.getElementById('c-name').value; item.balance = parseFloat(document.getElementById('c-bal').value) || 0; }
+            else if (cat === 'cw') { item.date = document.getElementById('cw-date').value; item.name = document.getElementById('cw-name').value; item.amt = parseFloat(document.getElementById('cw-amt').value) || 0; }
+            else if (cat === 'dc') { item.name = document.getElementById('dc-name').value; item.type = document.getElementById('dc-type').value; item.amt = parseFloat(document.getElementById('dc-amt').value) || 0; }
+            else if (cat === 'comm') { item.date = new Date().toISOString().split('T')[0]; item.who = document.getElementById('cm-who').value; item.amt = parseFloat(document.getElementById('cm-amt').value) || 0; item.paid = document.getElementById('cm-paid').value === 'true'; }
+
+            if (editId) { const idx = db[cat].findIndex(x => x.id === editId); db[cat][idx] = item; } else { db[cat].push(item); }
+            sync(); closeModal('m-' + (cat === 'comm' ? 'comm' : (cat === 'cw' ? 'cw' : (cat === 'dc' ? 'dc' : (cat === 'deals' ? 'deals' : (cat === 'banks' ? 'banks' : 'cash'))))));
+        }
+
+        function triggerEdit(cat, id) {
+            editId = id; const x = db[cat].find(i => i.id === id);
+            const mid = 'm-' + (cat === 'comm' ? 'comm' : (cat === 'cw' ? 'cw' : (cat === 'dc' ? 'dc' : (cat === 'deals' ? 'deals' : (cat === 'banks' ? 'banks' : 'cash')))));
+            openModal(mid);
+            if (cat === 'deals') { document.getElementById('d-date').value = x.date; document.getElementById('d-name').value = x.name; document.getElementById('d-amt').value = x.amt; document.getElementById('d-prof').value = x.prof; }
+            else if (cat === 'banks') { document.getElementById('b-name').value = x.name; document.getElementById('b-bal').value = x.balance; }
+            else if (cat === 'cash') { document.getElementById('c-name').value = x.name; document.getElementById('c-bal').value = x.balance; }
+            else if (cat === 'cw') { document.getElementById('cw-date').value = x.date; document.getElementById('cw-name').value = x.name; document.getElementById('cw-amt').value = x.amt; }
+            else if (cat === 'dc') { document.getElementById('dc-name').value = x.name; document.getElementById('dc-type').value = x.type; document.getElementById('dc-amt').value = x.amt; }
+            else if (cat === 'comm') { document.getElementById('cm-who').value = x.who; document.getElementById('cm-amt').value = x.amt; document.getElementById('cm-paid').value = x.paid.toString(); }
+        }
+
+        function triggerDelete(cat, id) { if(confirm("Confirm Delete?")) { db[cat] = db[cat].filter(x => x.id !== id); sync(); } }
+        function openAdjust(id) { adjId = id; const x = db.cash.find(i => i.id === id); document.getElementById('adj-target-name').innerText = "Location: " + x.name; openModal('m-cash-adjust'); }
+        function executeAdjustment() { const val = parseFloat(document.getElementById('adj-amt').value) || 0; const x = db.cash.find(i => i.id === adjId); x.balance += val; sync(); closeModal('m-cash-adjust'); }
+
+        function render() {
+            const rowFunc = (d, c, f) => { document.querySelector(`#t-${c} tbody`).innerHTML = d.map(f).join(''); };
+            rowFunc(db.deals, 'deals', x => `<tr><td>${x.date}</td><td>${x.name}</td><td>${x.amt.toLocaleString()}</td><td class="text-green">Rs. ${x.prof.toLocaleString()}</td><td><button class="btn btn-edit" onclick="triggerEdit('deals', ${x.id})">Edit</button><button class="btn btn-del" onclick="triggerDelete('deals', ${x.id})">Del</button></td></tr>`);
+            rowFunc(db.cw, 'cw', x => `<tr><td>${x.date}</td><td>${x.name}</td><td>Rs. ${x.amt.toLocaleString()}</td><td><button class="btn btn-edit" onclick="triggerEdit('cw', ${x.id})">Edit</button><button class="btn btn-del" onclick="triggerDelete('cw', ${x.id})">Del</button></td></tr>`);
+            rowFunc(db.dc, 'dc', x => `<tr><td>${x.name}</td><td>${x.type}</td><td class="${x.type=='Debtor'?'text-green':'text-red'}">Rs. ${x.amt.toLocaleString()}</td><td><button class="btn btn-edit" onclick="triggerEdit('dc', ${x.id})">Edit</button><button class="btn btn-del" onclick="triggerDelete('dc', ${x.id})">Del</button></td></tr>`);
+            rowFunc(db.comm, 'comm', x => `<tr><td>${x.date}</td><td>${x.who}</td><td>Rs. ${x.amt.toLocaleString()}</td><td><span style="color:${x.paid?'green':'orange'}">${x.paid?'Paid':'Pending'}</span></td><td><button class="btn btn-edit" onclick="triggerEdit('comm', ${x.id})">Edit</button><button class="btn btn-del" onclick="triggerDelete('comm', ${x.id})">Del</button></td></tr>`);
+
+            document.getElementById('g-banks').innerHTML = db.banks.map(b => `<div class="card"><h4>${b.name}</h4><div class="val">Rs. ${b.balance.toLocaleString()}</div><div style="margin-top:15px;"><button class="btn btn-edit" onclick="triggerEdit('banks', ${b.id})">Edit</button><button class="btn btn-del" onclick="triggerDelete('banks', ${b.id})">Del</button></div></div>`).join('');
+            document.getElementById('g-cash').innerHTML = db.cash.map(c => `<div class="card"><h4>${c.name}</h4><div class="val">Rs. ${c.balance.toLocaleString()}</div><div style="margin-top:15px;"><button class="btn btn-cash-plus" onclick="openAdjust(${c.id})">+ Cash</button><button class="btn btn-edit" onclick="triggerEdit('cash', ${c.id})">Edit</button><button class="btn btn-del" onclick="triggerDelete('cash', ${c.id})">Del</button></div></div>`).join('');
+
+            document.getElementById('stat-cash').innerText = 'Rs. ' + db.cash.reduce((a,b)=>a+b.balance,0).toLocaleString();
+            document.getElementById('stat-bank').innerText = 'Rs. ' + db.banks.reduce((a,b)=>a+b.balance,0).toLocaleString();
+            document.getElementById('stat-cw').innerText = 'Rs. ' + db.cw.reduce((a,b)=>a+b.amt,0).toLocaleString();
+            document.getElementById('stat-profit').innerText = 'Rs. ' + db.deals.reduce((a,b)=>a+b.prof,0).toLocaleString();
+            document.getElementById('stat-debt').innerText = 'Rs. ' + db.dc.filter(x => x.type === 'Debtor').reduce((a,b)=>a+b.amt,0).toLocaleString();
+            document.getElementById('stat-comm').innerText = 'Rs. ' + db.comm.filter(x => !x.paid).reduce((a,b)=>a+b.amt,0).toLocaleString();
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('profitChart'); if(!ctx) return; if(chart) chart.destroy();
+            const filter = document.getElementById('chartFilter').value; const pMap = {};
+            db.deals.forEach(d => { const k = filter === 'weekly' ? d.date : d.date.substring(0, 7); pMap[k] = (pMap[k] || 0) + d.prof; });
+            const labels = Object.keys(pMap).sort();
+            chart = new Chart(ctx.getContext('2d'), { type: 'line', data: { labels, datasets: [{ data: labels.map(l => pMap[l]), borderColor: '#5469d4', backgroundColor: 'rgba(84, 105, 212, 0.1)', fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+        }
+
+        // --- REPORT GENERATION ---
+        function generateReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const filter = document.getElementById('chartFilter').value;
+            const now = new Date();
+            const dateRange = filter === 'weekly' ? 'Last 7 Days' : 'Last 30 Days';
+
+            // Filter logic based on timeframe
+            const daysToSub = filter === 'weekly' ? 7 : 30;
+            const startTime = now.getTime() - (daysToSub * 24 * 60 * 60 * 1000);
+            
+            const filteredDeals = db.deals.filter(d => new Date(d.date).getTime() > startTime);
+            const filteredCW = db.cw.filter(c => new Date(c.date).getTime() > startTime);
+
+            // PDF Branding
+            doc.setFontSize(22);
+            doc.setTextColor(84, 105, 212);
+            doc.text("CRYPTO CMB - Financial Report", 14, 20);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Generated on: ${now.toLocaleString()} | Report Period: ${dateRange}`, 14, 28);
+
+            // Summary Section
+            doc.autoTable({
+                startY: 35,
+                head: [['Financial Summary', 'Amount (LKR)']],
+                body: [
+                    ['Total Cash (All Locations)', db.cash.reduce((a,b)=>a+b.balance,0).toLocaleString()],
+                    ['Total Bank Balance', db.banks.reduce((a,b)=>a+b.balance,0).toLocaleString()],
+                    ['Total Profit (Period)', filteredDeals.reduce((a,b)=>a+b.prof,0).toLocaleString()],
+                    ['Active Loans (Cash With)', db.cw.reduce((a,b)=>a+b.amt,0).toLocaleString()]
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: [84, 105, 212] }
+            });
+
+            // Deals Table
+            doc.setFontSize(14);
+            doc.setTextColor(0);
+            doc.text("Detailed Transaction History", 14, doc.lastAutoTable.finalY + 15);
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 20,
+                head: [['Date', 'Deal Name', 'Amount', 'Profit']],
+                body: filteredDeals.map(d => [d.date, d.name, d.amt.toLocaleString(), d.prof.toLocaleString()]),
+                theme: 'grid'
+            });
+
+            // Debtors & Creditors
+            doc.text("Debtors & Creditors List", 14, doc.lastAutoTable.finalY + 15);
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 20,
+                head: [['Name', 'Type', 'Amount']],
+                body: db.dc.map(x => [x.name, x.type, x.amt.toLocaleString()]),
+                theme: 'grid'
+            });
+
+            doc.save(`CryptoCMB_Report_${filter}_${now.toISOString().split('T')[0]}.pdf`);
+        }
+    </script>
+</body>
+</html>
